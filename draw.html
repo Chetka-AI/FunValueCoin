@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+  .pixel {
+    width: 15px;
+    height: 15px;
+    border: 1px solid black;
+    float: left;
+  }
+  .row::after {
+    content: "";
+    clear: both;
+    display: table;
+  }
+  #palette, #tools {
+    margin-bottom: 20px;
+  }
+  .paletteColor {
+    width: 20px;
+    height: 20px;
+    display: inline-block;
+    border: 1px solid black;
+  }
+</style>
+</head>
+<body>
+<div id="palette"></div>
+<div id="tools">
+  <button id="pencil">Ołówek</button>
+  <button id="eraser">Gumka</button>
+  <button id="undo">Cofnij</button>
+</div>
+<div id="grid"></div>
+
+<script>
+  var selectedColor = '#000000';
+  var isDrawing = false;
+  var isEraser = false;
+  var history = [];
+  var basicColors = ["#000000", "#808080", "#C0C0C0", "#FFFFFF",
+    "#800000", "#FF0000", "#800080", "#FF00FF",
+    "#008000", "#00FF00", "#808000", "#FFFF00",
+    "#000080", "#0000FF", "#008080", "#00FFFF",
+    "#964B00", "#FFA500", "#A52A2A", "#A52A2A",
+    "#006400", "#008B00", "#228B22", "#FFD700"];
+    
+  var palette = document.querySelector('#palette');
+  basicColors.forEach(function(color, i) {
+    var paletteColor = document.createElement('div');
+    paletteColor.classList.add('paletteColor');
+    paletteColor.style.background = color;
+    paletteColor.addEventListener('click', function(e) {
+      if (e.detail === 1) {
+        selectedColor = this.style.background;
+      } else if (e.detail === 2) {
+  var colorPicker = document.createElement('input');
+  colorPicker.type = 'color';
+  colorPicker.value = rgb2hex(this.style.backgroundColor);  // convert RGB to HEX
+  colorPicker.onchange = function() {
+    paletteColor.style.background = this.value;
+    selectedColor = this.value;
+  };
+  colorPicker.click();  // open the color picker
+}
+
+function rgb2hex(rgb) {
+  // convert RGB color to HEX, as color picker doesn't support RGB format
+  var a = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+  return "#" + ((1 << 24) + (parseInt(a[1]) << 16) + (parseInt(a[2]) << 8) + parseInt(a[3])).toString(16).slice(1);
+}
+
+    });
+    palette.appendChild(paletteColor);
+  });
+
+  var pencil = document.querySelector('#pencil');
+  pencil.addEventListener('click', function() {
+    isEraser = false;
+  });
+
+  var eraser = document.querySelector('#eraser');
+  eraser.addEventListener('click', function() {
+    isEraser = true;
+  });
+
+  var undo = document.querySelector('#undo');
+  undo.addEventListener('click', function() {
+    if (history.length > 0) {
+      var lastState = history.pop();
+      for (var i = 0; i < grid.children.length; i++) {
+        var row = grid.children[i];
+        for (var j = 0; j < row.children.length; j++) {
+          var pixel = row.children[j];
+          pixel.style.background = lastState[i][j];
+        }
+      }
+    }
+  });
+
+  var grid = document.querySelector('#grid');
+  for (var i = 0; i < 24; i++) {
+    var row = document.createElement('div');
+    row.classList.add('row');
+    for (var j = 0; j < 24; j++) {
+      var pixel = document.createElement('div');
+      pixel.classList.add('pixel');
+      pixel.addEventListener('mousedown', function(e) {
+        isDrawing = true;
+        this.style.background = isEraser ? 'white' : selectedColor;
+        e.preventDefault();
+      });
+      pixel.addEventListener('mouseenter', function(e) {
+        if (isDrawing) {
+          this.style.background = isEraser ? 'white' : selectedColor;
+        }
+        e.preventDefault();
+      });
+      pixel.addEventListener('mouseup', function() {
+        isDrawing = false;
+        history.push(getCurrentState());
+      });
+      
+      // for touch devices
+      pixel.addEventListener('touchstart', function(e) {
+        isDrawing = true;
+        this.style.background = isEraser ? 'white' : selectedColor;
+        e.preventDefault();
+      });
+      pixel.addEventListener('touchmove', function(e) {
+        if (isDrawing) {
+          var touch = e.touches[0];
+          var pixel = document.elementFromPoint(touch.clientX, touch.clientY);
+          if (pixel && pixel.classList.contains('pixel')) {
+            pixel.style.background = isEraser ? 'white' : selectedColor;
+          }
+        }
+        e.preventDefault();
+      });
+      pixel.addEventListener('touchend', function() {
+        isDrawing = false;
+        history.push(getCurrentState());
+      });
+
+      row.appendChild(pixel);
+    }
+    grid.appendChild(row);
+  }
+
+  function getCurrentState() {
+    var state = [];
+    for (var i = 0; i < grid.children.length; i++) {
+      var row = grid.children[i];
+      var rowState = [];
+      for (var j = 0; j < row.children.length; j++) {
+        var pixel = row.children[j];
+        rowState.push(pixel.style.background);
+      }
+      state.push(rowState);
+    }
+    return state;
+  }
+</script>
+</body>
+</html>
